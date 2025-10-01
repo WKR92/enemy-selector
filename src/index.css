@@ -1,0 +1,122 @@
+* {
+  box-sizing: border-box;
+}
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  font-family: system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+}
+.container {
+  max-width: 960px;
+  margin: 24px auto;
+  padding: 0 16px;
+}
+.row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+input[type="number"] {
+  width: 80px;
+  padding: 6px 8px;
+}
+button {
+  padding: 8px 12px;
+  cursor: pointer;
+}
+hr {
+  margin: 16px 0;
+}
+
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+  background: #eee;
+  font-size: 12px;
+}
+.list-inline {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.enemy-pill {
+  padding: 4px 8px;
+  border: 1px solid #ddd;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.enemy-pill .kill {
+  color: #b00;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+/* ——— Nowy wrapper wrogów: jeden rząd z zawijaniem ——— */
+.enemy-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+/* Karta przeciwnika: nie rozciąga się szerzej niż potrzeba */
+.col {
+  flex: 0 0 auto; /* bez rozciągania */
+  display: inline-flex; /* szerokość = treść */
+  flex-direction: column;
+  gap: 6px;
+  min-width: 120px; /* byle czytelnie */
+  border: 1px solid #eee;
+  border-radius: 8px;
+  padding: 8px;
+  background: #fff;
+}
+
+.col-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.col-id {
+  font-weight: 700;
+}
+.col-meta {
+  font-size: 12px;
+  color: #555;
+}
+
+.seq {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", monospace;
+}
+.num {
+  padding: 0 2px;
+}
+.comma {
+  color: #999;
+  margin: 0 2px;
+}
+.num.active {
+  background: #1a73e8;
+  color: white;
+  border-radius: 4px;
+  padding: 0 4px;
+}
+
+.small {
+  font-size: 12px;
+  color: #555;
+}
+
+/* Delikatny odstęp między tekstem label a inputem */
+.row label input {
+  margin-left: 6px;
+}
