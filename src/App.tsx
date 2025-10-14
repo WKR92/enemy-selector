@@ -1,16 +1,16 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type Strength = 1 | 2 | 3 | 4;
 
 type Enemy = {
-  id: number; // etykieta
-  strength: Strength; // 1/2/3/4
+  id: number;
+  strength: Strength;
 };
 
 type Segment = {
   enemyId: number;
   enemyStrength: Strength;
-  segIndex: number; // 1..strength
+  segIndex: number;
 };
 
 const strengthOrderDesc: Strength[] = [4, 3, 2, 1];
@@ -27,7 +27,6 @@ function buildEnemies(counts: Record<Strength, number>): Enemy[] {
 }
 
 function buildTrack(enemies: Enemy[]): Segment[] {
-  // Kolejność segmentów na torze: najpierw wszyscy S4 (4 segmenty każdy), potem S3 (3), S2 (2), S1 (1)
   const ordered = enemies
     .slice()
     .sort((a, b) => b.strength - a.strength || a.id - b.id);
@@ -40,41 +39,78 @@ function buildTrack(enemies: Enemy[]): Segment[] {
   return segs;
 }
 
-// Losowy wróg z podanej puli (równomiernie)
 function pickRandomEnemy(enemies: Enemy[]): Enemy {
   return enemies[Math.floor(Math.random() * enemies.length)];
 }
 
-// Indeks pierwszego segmentu danego wroga na torze
 function firstSegmentIndexOfEnemy(track: Segment[], enemyId: number): number {
   return track.findIndex((seg) => seg.enemyId === enemyId);
 }
 
+// --- helpers for localStorage ---
+function saveState(key: string, value: unknown) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {}
+}
+
+function loadState<T>(key: string, fallback: T): T {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return fallback;
+    return JSON.parse(raw) as T;
+  } catch {
+    return fallback;
+  }
+}
+
 export default function App() {
-  // Formularz startowy
-  const [c4, setC4] = useState(0);
-  const [c3, setC3] = useState(0);
-  const [c2, setC2] = useState(0);
-  const [c1, setC1] = useState(0);
+  // inputs
+  const [c4, setC4] = useState<string>(() => loadState("c4", ""));
+  const [c3, setC3] = useState<string>(() => loadState("c3", ""));
+  const [c2, setC2] = useState<string>(() => loadState("c2", ""));
+  const [c1, setC1] = useState<string>(() => loadState("c1", ""));
 
-  // Stan gry
-  const [enemies, setEnemies] = useState<Enemy[]>([]);
-  const [track, setTrack] = useState<Segment[]>([]);
-  const [cursor, setCursor] = useState<number>(0); // indeks w "track"
-  const [aliveRoundTouched, setAliveRoundTouched] = useState<Set<number>>(
-    new Set()
+  // game state
+  const [enemies, setEnemies] = useState<Enemy[]>(() =>
+    loadState("enemies", [])
   );
-  const [roundCount, setRoundCount] = useState(1);
-  const [needsRoundStart, setNeedsRoundStart] = useState<boolean>(false);
+  const [track, setTrack] = useState<Segment[]>(() => loadState("track", []));
+  const [cursor, setCursor] = useState<number>(() => loadState("cursor", 0));
+  const [aliveRoundTouched, setAliveRoundTouched] = useState<Set<number>>(
+    () => new Set(loadState("aliveRoundTouched", []))
+  );
+  const [roundCount, setRoundCount] = useState<number>(() =>
+    loadState("roundCount", 1)
+  );
+  const [needsRoundStart, setNeedsRoundStart] = useState<boolean>(() =>
+    loadState("needsRoundStart", false)
+  );
 
-  // Input rzutu (bez krytyków)
-  const [roll, setRoll] = useState<number>(1);
+  const [roll, setRoll] = useState<string>(() => loadState("roll", ""));
 
-  // Pomocnicze
+  // save to localStorage on change
+  useEffect(() => saveState("c4", c4), [c4]);
+  useEffect(() => saveState("c3", c3), [c3]);
+  useEffect(() => saveState("c2", c2), [c2]);
+  useEffect(() => saveState("c1", c1), [c1]);
+  useEffect(() => saveState("roll", roll), [roll]);
+  useEffect(() => saveState("enemies", enemies), [enemies]);
+  useEffect(() => saveState("track", track), [track]);
+  useEffect(() => saveState("cursor", cursor), [cursor]);
+  useEffect(() => saveState("roundCount", roundCount), [roundCount]);
+  useEffect(
+    () => saveState("needsRoundStart", needsRoundStart),
+    [needsRoundStart]
+  );
+  useEffect(
+    () => saveState("aliveRoundTouched", Array.from(aliveRoundTouched)),
+    [aliveRoundTouched]
+  );
+
   const totalLen = track.length;
   const currentSeg = track[cursor];
 
-  // >>> Wyświetlaj przeciwników posortowanych: S malejąco, potem id rosnąco.
   const orderedDisplay = useMemo(
     () =>
       enemies.slice().sort((a, b) => b.strength - a.strength || a.id - b.id),
@@ -109,7 +145,6 @@ export default function App() {
       }
     }
 
-    // Spróbuj zachować obecnego wroga
     if (track.length > 0) {
       const currentEnemyId = track[cursor]?.enemyId;
       const pos = t.findIndex((s) => s.enemyId === currentEnemyId);
@@ -120,13 +155,23 @@ export default function App() {
       }
     }
 
-    // Fallback – początek
     setCursor(0);
     setAliveRoundTouched(new Set([t[0].enemyId]));
   }
 
   function handleReady() {
-    const counts: Record<Strength, number> = { 4: c4, 3: c3, 2: c2, 1: c1 };
+    const toInt = (v: string) => {
+      const n = parseInt(v, 10);
+      return Number.isFinite(n) && n > 0 ? n : 0;
+    };
+
+    const counts: Record<Strength, number> = {
+      4: toInt(c4),
+      3: toInt(c3),
+      2: toInt(c2),
+      1: toInt(c1),
+    };
+
     const init = buildEnemies(counts);
     if (init.length === 0) {
       resetBoardOnly();
@@ -136,7 +181,6 @@ export default function App() {
     const t = buildTrack(init);
     setTrack(t);
 
-    // Start: po prostu losowy wróg z całej puli
     const chosen = pickRandomEnemy(init);
     const pos = firstSegmentIndexOfEnemy(t, chosen.id);
     setCursor(pos >= 0 ? pos : 0);
@@ -145,7 +189,6 @@ export default function App() {
     setNeedsRoundStart(false);
   }
 
-  // --- Reset ---
   function resetBoardOnly() {
     setEnemies([]);
     setTrack([]);
@@ -154,15 +197,16 @@ export default function App() {
     setRoundCount(0);
     setNeedsRoundStart(false);
   }
+
   function resetAll() {
     resetBoardOnly();
-    setC4(0);
-    setC3(0);
-    setC2(0);
-    setC1(0);
+    setC4("");
+    setC3("");
+    setC2("");
+    setC1("");
+    setRoll("");
   }
 
-  // Start nowej rundy (losowy wróg)
   function selectNewRoundStart(): number {
     const chosen = pickRandomEnemy(enemies);
     const pos = firstSegmentIndexOfEnemy(track, chosen.id);
@@ -174,46 +218,35 @@ export default function App() {
 
   function applyRoll() {
     if (track.length === 0) return;
-
     if (needsRoundStart) {
       selectNewRoundStart();
       setNeedsRoundStart(false);
     }
 
-    const step = Math.max(0, Math.floor(roll)) + 1; // bez krytyków
-    const lastIndex = totalLen - 1;
+    const parsed = Math.floor(Number(roll));
+    const safe = Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
 
+    const step = Math.max(0, safe) + 1;
+    const lastIndex = totalLen - 1;
     const willWrap = cursor + step > lastIndex;
     const dest = (cursor + step) % totalLen;
-
-    // Zbiór dotkniętych W TEJ rundzie (przed ewentualnym wrapem)
     const touchedThisRound = new Set(aliveRoundTouched);
 
     if (!willWrap) {
-      // Normalny ruch w obrębie tej samej puli segmentów
       setCursor(dest);
       if (track[dest]) touchedThisRound.add(track[dest].enemyId);
       setAliveRoundTouched(touchedThisRound);
       return;
     }
 
-    // --- KONIEC RUNDY (wrap) ---
-    // UWAGA: NIE dodajemy track[dest].enemyId – to już byłaby „nowa runda”.
     setCursor(dest);
-
-    // Czy w tej rundzie działał jakikolwiek S4?
     const anyS4Touched =
       hasPotenzni &&
       [...touchedThisRound].some((id) =>
         enemies.find((e) => e.id === id && e.strength === 4)
       );
 
-    console.log("hasPotenzni", hasPotenzni);
-    console.log("anyS4Touched", anyS4Touched);
-
     if (hasPotenzni && !anyS4Touched) {
-      console.log("Potężny nie reagiwał w tej rundzie - wymuszenie!");
-      // Wymuszenie: losowy S4, zaznacz go jako „dotknięty” w TEJ (właśnie kończonej) rundzie
       const s4pool = enemies.filter((e) => e.strength === 4);
       if (s4pool.length > 0) {
         const chosenS4 = pickRandomEnemy(s4pool);
@@ -224,11 +257,8 @@ export default function App() {
           setAliveRoundTouched(touchedThisRound);
         }
       }
-      // Nowa runda wystartuje przy następnym kliknięciu
       setNeedsRoundStart(true);
     } else {
-      // Nie trzeba wymuszać → od razu start nowej rundy
-      console.log("Nie trzeba wymuszać → od razu start nowej rundy.");
       selectNewRoundStart();
     }
   }
@@ -241,7 +271,6 @@ export default function App() {
     }
     setEnemies(remaining);
 
-    // Losowy nowy cel i skok na jego 1. segment
     const chosen = pickRandomEnemy(remaining);
     rebuildTrackAndClampCursor(remaining, chosen.id);
   }
@@ -249,18 +278,13 @@ export default function App() {
   function addEnemy(strength: Strength) {
     const nextId = (enemies.reduce((m, e) => Math.max(m, e.id), 0) || 0) + 1;
     const next = enemies.concat([{ id: nextId, strength }]);
-
-    // „Posegreguj istniejących” po dodaniu: nie zmieniamy ID, ale
-    // lista wyświetlana i tor i tak są porządkowane (tor już przez buildTrack).
     setEnemies(next);
     rebuildTrackAndClampCursor(next);
   }
 
-  // ----- Widok kart przeciwników -----
   function renderEnemyColumns() {
     if (enemies.length === 0) return null;
 
-    // Aktywna komórka: enemyId = currentSeg.enemyId, segIndex = currentSeg.segIndex
     const activeEnemyId = currentSeg?.enemyId;
     const activeSegIndex = currentSeg?.segIndex;
 
@@ -272,7 +296,7 @@ export default function App() {
               <span className="col-id">#{e.id}</span>
               <span className="col-meta">S{e.strength}</span>
             </div>
-            <div className="seq" aria-label={`Segmenty wroga #${e.id}`}>
+            <div className="seq">
               {Array.from({ length: e.strength }, (_, i) => i + 1).map(
                 (n, idx) => (
                   <span key={n}>
@@ -293,7 +317,7 @@ export default function App() {
             </div>
             <div style={{ marginTop: 6 }}>
               <button className="small" onClick={() => killEnemy(e.id)}>
-                usuń ×
+                remove ×
               </button>
             </div>
           </div>
@@ -304,57 +328,63 @@ export default function App() {
 
   return (
     <div className="container">
-      <h1>Który wróg reaguje</h1>
+      <h1>Which Enemy Reacts</h1>
 
-      <div className="row">
-        <label>
-          Potężny (4):
+      <div className="controls">
+        <label className="control">
+          Powerful (4)
           <input
             type="number"
             min={0}
             value={c4}
-            onChange={(e) => setC4(parseInt(e.target.value || "0"))}
+            placeholder="0"
+            onChange={(e) => setC4(e.target.value)}
           />
         </label>
-        <label>
-          Silny (3):
+        <label className="control">
+          Strong (3)
           <input
             type="number"
             min={0}
             value={c3}
-            onChange={(e) => setC3(parseInt(e.target.value || "0"))}
+            placeholder="0"
+            onChange={(e) => setC3(e.target.value)}
           />
         </label>
-        <label>
-          Zwykły (2):
+        <label className="control">
+          Regular (2)
           <input
             type="number"
             min={0}
             value={c2}
-            onChange={(e) => setC2(parseInt(e.target.value || "0"))}
+            placeholder="0"
+            onChange={(e) => setC2(e.target.value)}
           />
         </label>
-        <label>
-          Łatwy (1):
+        <label className="control">
+          Easy (1)
           <input
             type="number"
             min={0}
             value={c1}
-            onChange={(e) => setC1(parseInt(e.target.value || "0"))}
+            placeholder="0"
+            onChange={(e) => setC1(e.target.value)}
           />
         </label>
-        <button onClick={handleReady}>Ready</button>
-        <button onClick={resetAll}>Zresetuj</button>
+        <div className="controls-actions">
+          <button onClick={handleReady}>Ready</button>
+          <button onClick={resetAll}>Reset</button>
+        </div>
       </div>
 
       <hr />
 
       <div>
-        <strong>Wrogowie:</strong>
+        <strong>Enemies:</strong>
         {enemies.length === 0 ? (
           <span className="small">
             {" "}
-            brak (ustaw liczby powyżej i kliknij Ready).
+            none (set counts above and click Ready).
           </span>
         ) : (
           <div className="row" style={{ marginTop: 8 }}>
@@ -373,29 +403,27 @@ export default function App() {
 
           <div style={{ height: 12 }} />
           <div className="small">
-            Runda: {roundCount} • Pozycja kursora: {cursor + 1}/{totalLen}
-            {needsRoundStart
-              ? " • (następne kliknięcie: start nowej rundy)"
-              : ""}
+            Round: {roundCount} • Cursor: {cursor + 1}/{totalLen}
+            {needsRoundStart ? " • (next click: start new round)" : ""}
           </div>
 
           <hr />
-          <div className="row">
-            <label>
-              Wynik głównej kości:
+          <div className="row roll-row">
+            <label className="roll-label">
+              Main die result
               <input
                 type="number"
                 min={0}
                 value={roll}
-                onChange={(e) => setRoll(parseInt(e.target.value || "0"))}
+                onChange={(e) => setRoll(e.target.value)}
               />
             </label>
-            <button onClick={applyRoll}>Zatwierdź rzut → przesuń</button>
+            <button onClick={applyRoll}>Apply roll → advance</button>
           </div>
-          <div className="small">
-            Przesunięcie = (wynik + 1). Po przejściu całej puli: jeśli w tej
-            rundzie żaden S4 nie działał, wymusimy losowego S4 i pokażemy to na
-            znaczniku. Nowa runda wystartuje przy następnym kliknięciu.
+          <div className="small shift-help">
+            Shift = (result + 1). When wrapping past the end: if no S4 acted
+            this round, we force a random S4 to act and mark it. The button click
+            calculates enemies reaction order.
           </div>
         </>
       )}

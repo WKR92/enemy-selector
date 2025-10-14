@@ -7,12 +7,63 @@ body,
   height: 100%;
   margin: 0;
   font-family: system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 .container {
   max-width: 960px;
   margin: 24px auto;
   padding: 0 16px;
 }
+
+/* Controls: desktop/tablet = grid; phone = vertical stack (one per row) */
+.controls {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(180px, 1fr));
+  gap: 12px;
+  align-items: end;
+}
+.control {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px; /* subtle gap between label text and input */
+}
+.controls .controls-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 900px) {
+  .controls {
+    grid-template-columns: repeat(2, minmax(200px, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  /* Vertical list on phones */
+  .controls {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 14px; /* a bit more breathing room vertically */
+    align-items: stretch;
+  }
+  .control {
+    padding: 6px 8px; /* slight padding for neat rows */
+    border: 1px solid #eee;
+    border-radius: 8px;
+    background: #fff;
+  }
+  .controls .controls-actions {
+    justify-content: stretch;
+  }
+  .controls .controls-actions button {
+    flex: 1 1 auto; /* full-width buttons on mobile */
+  }
+}
+
 .row {
   display: flex;
   gap: 12px;
@@ -20,14 +71,26 @@ body,
   flex-wrap: wrap;
 }
 
+/* Roll row: gap between text and input */
+.roll-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Inputs */
 input[type="number"] {
-  width: 80px;
+  width: 100%;
+  max-width: 130px; /* keeps inputs compact on wider screens */
   padding: 6px 8px;
 }
+
+/* Buttons */
 button {
   padding: 8px 12px;
   cursor: pointer;
 }
+
 hr {
   margin: 16px 0;
 }
@@ -39,26 +102,8 @@ hr {
   background: #eee;
   font-size: 12px;
 }
-.list-inline {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-.enemy-pill {
-  padding: 4px 8px;
-  border: 1px solid #ddd;
-  border-radius: 999px;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-.enemy-pill .kill {
-  color: #b00;
-  cursor: pointer;
-  font-weight: 700;
-}
 
-/* ——— Nowy wrapper wrogów: jeden rząd z zawijaniem ——— */
+/* Enemies row: wraps on small screens */
 .enemy-row {
   display: flex;
   flex-wrap: wrap;
@@ -66,17 +111,27 @@ hr {
   align-items: flex-start;
 }
 
-/* Karta przeciwnika: nie rozciąga się szerzej niż potrzeba */
+/* Enemy card */
 .col {
-  flex: 0 0 auto; /* bez rozciągania */
-  display: inline-flex; /* szerokość = treść */
+  flex: 0 0 auto;
+  display: inline-flex;
   flex-direction: column;
   gap: 6px;
-  min-width: 120px; /* byle czytelnie */
+  min-width: 120px;
   border: 1px solid #eee;
   border-radius: 8px;
   padding: 8px;
   background: #fff;
+}
+@media (max-width: 520px) {
+  .col {
+    min-width: 46%;
+  }
+}
+@media (max-width: 380px) {
+  .col {
+    min-width: 100%;
+  }
 }
 
 .col-head {
@@ -116,7 +171,13 @@ hr {
   color: #555;
 }
 
-/* Delikatny odstęp między tekstem label a inputem */
+/* Push the 'Shift = …' helper text slightly down from the input row */
+.shift-help {
+  margin-top: 8px;
+  padding-bottom: 1rem;
+}
+
+/* Legacy: subtle spacing inside labels if someone nests inputs there */
 .row label input {
   margin-left: 6px;
 }
